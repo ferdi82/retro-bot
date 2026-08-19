@@ -6,7 +6,6 @@ from aiohttp import web
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
-# Mercati eBay monitorati (Italia, Germania, Francia, Regno Unito)
 EBAY_DOMAINS = [
     ("IT", "https://www.ebay.it"),
     ("DE", "https://www.ebay.de"),
@@ -214,16 +213,11 @@ KEYWORDS = [
 ]
 
 BLACKLIST = [
-    # Falsi e copie
     "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
     "custodia vuota ps4", "custodia vuota ps5", "cover art only", "manuale stampato",
     "reprint", "manuale pdf",
-    
-    # Protezioni e accessori moderni di plastica (anti-falsi positivi)
     "box protector", "custodia protettiva", "salvascatola", "protettore box",
     "proteggi scatola", "protezione pet", "box plastica", "schutzhülle", "boite de protection",
-    
-    # Guide cartacee e poster
     "solo guida", "guida strategica", "poster", "solo poster", "lösungsbuch"
 ]
 
@@ -232,7 +226,6 @@ bot = Bot(token=TELEGRAM_TOKEN)
 
 async def check_ebay(keyword, domain_name, base_url):
     query = keyword.replace(" ", "+")
-    # LH_BIN=1 filtra ESCLUSIVAMENTE il "Compralo Subito"
     rss_url = f"{base_url}/sch/i.html?_nkw={query}&_sop=10&LH_BIN=1&_rss=1"
     
     feed = feedparser.parse(rss_url)
@@ -262,6 +255,13 @@ async def check_ebay(keyword, domain_name, base_url):
             print(f"[ERRORE]: {e}")
 
 async def scraper_loop():
+    # Messaggio di conferma avvio
+    try:
+        await bot.send_message(chat_id=CHAT_ID, text="🤖 *Bot Avviato e Operativo!* Radar retrogaming attivo.")
+        print("[SISTEMA] Notifica di avvio inviata a Telegram.")
+    except Exception as e:
+        print(f"[ERRORE AVVIO TELEGRAM]: {e}")
+
     while True:
         for kw in KEYWORDS:
             for domain_name, base_url in EBAY_DOMAINS:
