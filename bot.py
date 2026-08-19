@@ -224,13 +224,16 @@ BLACKLIST = [
 visti = set()
 bot = Bot(token=TELEGRAM_TOKEN)
 
-async def check_ebay(keyword, domain_name, base_url):
+async def check_ebay(keyword, domain_name, base_url, is_first_run=False):
     query = keyword.replace(" ", "+")
     rss_url = f"{base_url}/sch/i.html?_nkw={query}&_sop=10&LH_BIN=1&_rss=1"
     
     feed = feedparser.parse(rss_url)
     
-    for entry in feed.entries[:5]:
+    # Nel primo ciclo prende i primi 2 annunci esistenti per parola chiave; nei successivi fino a 5
+    max_items = 2 if is_first_run else 5
+    
+    for entry in feed.entries[:max_items]:
         item_id = entry.link
         title_clean = entry.title.lower()
         
@@ -241,8 +244,9 @@ async def check_ebay(keyword, domain_name, base_url):
             
         visti.add(item_id)
         
+        tag = "📦 Catalogo Esistente" if is_first_run else "🎯 Nuovo Annuncio"
         message = (
-            f"🎯 *Affare Compralo Subito [{domain_name}]!*\n\n"
+            f"{tag} *[{domain_name}]*\n\n"
             f"📦 *Titolo:* {entry.title}\n"
             f"🔍 *Filtro:* {keyword}\n\n"
             f"🔗 [Apri su eBay {domain_name}]({entry.link})"
@@ -250,24 +254,34 @@ async def check_ebay(keyword, domain_name, base_url):
         
         try:
             await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
-            print(f"[{domain_name} OK] Inviato: {entry.title}")
+            await asyncio.sleep(2)  # Pausa anti-spam Telegram
         except Exception as e:
-            print(f"[ERRORE]: {e}")
+            print(f"[ERRORE TELEGRAM]: {e}")
 
 async def scraper_loop():
-    # Messaggio di conferma avvio
     try:
-        await bot.send_message(chat_id=CHAT_ID, text="🤖 *Bot Avviato e Operativo!* Radar retrogaming attivo.")
-        print("[SISTEMA] Notifica di avvio inviata a Telegram.")
+        await bot.send_message(chat_id=CHAT_ID, text="🚀 *Avvio scansione dell'archivio esistente su eBay...* (Riceverai i migliori annunci attualmente attivi)")
     except Exception as e:
-        print(f"[ERRORE AVVIO TELEGRAM]: {e}")
+        print(f"[ERRORE]: {e}")
 
+    # 1. SCANSIONE INIZIALE DI TUTTO L'ESISTENTE
+    for kw in KEYWORDS:
+        for domain_name, base_url in EBAY_DOMAINS:
+            await check_ebay(kw, domain_name, base_url, is_first_run=True)
+            await asyncio.sleep(1)
+
+    try:
+        await bot.send_message(chat_id=CHAT_ID, text="✅ *Scansione archivio completata!* Da ora in poi riceverai solo i nuovi annunci pubblicati in tempo reale.")
+    except Exception as e:
+        print(f"[ERRORE]: {e}")
+
+    # 2. CICLO NORMALE PER I SOLI NUOVI ANNUNCI
     while True:
+        await asyncio.sleep(120)
         for kw in KEYWORDS:
             for domain_name, base_url in EBAY_DOMAINS:
-                await check_ebay(kw, domain_name, base_url)
+                await check_ebay(kw, domain_name, base_url, is_first_run=False)
                 await asyncio.sleep(1.5)
-        await asyncio.sleep(120)
 
 async def handle_ping(request):
     return web.Response(text="Bot is running!")
