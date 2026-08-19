@@ -6,7 +6,40 @@ from aiohttp import web
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
+# Mercati eBay monitorati (Italia, Germania, Francia, Regno Unito)
+EBAY_DOMAINS = [
+    ("IT", "https://www.ebay.it"),
+    ("DE", "https://www.ebay.de"),
+    ("FR", "https://www.ebay.fr"),
+    ("UK", "https://www.ebay.co.uk"),
+]
+
 KEYWORDS = [
+    # ==================== SVUOTA-SOFFITTA / OCCASIONI INCONSAPEVOLI ====================
+    "svuoto soffitta giochi",
+    "svuoto cantina nintendo",
+    "vecchi giochi nintendo",
+    "cassette nintendo",
+    "cassette super nintendo",
+    "giochi anni 90",
+    "blocco videogiochi vecchi",
+    "lotto videogiochi infanzia",
+    "scatola vecchi giochi",
+
+    # ==================== DISTRIBUZIONE ITALIANA & TERMINI COLLEZIONISTICI ====================
+    "pal gig",
+    "distribuzione gig",
+    "mattel nes",
+    "black label ps1",
+    "snes cib",
+    "n64 cib",
+    "game boy cib",
+    "snes ovp",
+    "n64 ovp",
+    "sigillato nintendo",
+    "sealed snes",
+    "sealed n64",
+
     # ==================== CONSOLE (5ª GEN - 32/64 BIT) ====================
     "sega saturn console",
     "sega saturn pal",
@@ -162,7 +195,7 @@ KEYWORDS = [
     "alien vs predator jaguar",
     "battlesphere jaguar",
 
-    # ==================== SCATOLE, MANUALI, LOTTI & OCCASIONI ====================
+    # ==================== SCATOLE, MANUALI, LOTTI & FONDI ====================
     "snes solo scatola",
     "scatola super nintendo",
     "n64 box only",
@@ -181,16 +214,26 @@ KEYWORDS = [
 ]
 
 BLACKLIST = [
+    # Falsi e copie
     "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
-    "custodia vuota ps4", "custodia vuota ps5", "cover art only", "manuale stampato"
+    "custodia vuota ps4", "custodia vuota ps5", "cover art only", "manuale stampato",
+    "reprint", "manuale pdf",
+    
+    # Protezioni e accessori moderni di plastica (anti-falsi positivi)
+    "box protector", "custodia protettiva", "salvascatola", "protettore box",
+    "proteggi scatola", "protezione pet", "box plastica", "schutzhülle", "boite de protection",
+    
+    # Guide cartacee e poster
+    "solo guida", "guida strategica", "poster", "solo poster", "lösungsbuch"
 ]
 
 visti = set()
 bot = Bot(token=TELEGRAM_TOKEN)
 
-async def check_ebay(keyword):
+async def check_ebay(keyword, domain_name, base_url):
     query = keyword.replace(" ", "+")
-    rss_url = f"https://www.ebay.it/sch/i.html?_nkw={query}&_sop=10&_rss=1"
+    # LH_BIN=1 filtra ESCLUSIVAMENTE il "Compralo Subito"
+    rss_url = f"{base_url}/sch/i.html?_nkw={query}&_sop=10&LH_BIN=1&_rss=1"
     
     feed = feedparser.parse(rss_url)
     
@@ -206,24 +249,25 @@ async def check_ebay(keyword):
         visti.add(item_id)
         
         message = (
-            f"🎯 *Rarità / Console / Affare Rilevato!*\n\n"
+            f"🎯 *Affare Compralo Subito [{domain_name}]!*\n\n"
             f"📦 *Titolo:* {entry.title}\n"
             f"🔍 *Filtro:* {keyword}\n\n"
-            f"🔗 [Apri l'annuncio su eBay]({entry.link})"
+            f"🔗 [Apri su eBay {domain_name}]({entry.link})"
         )
         
         try:
             await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="Markdown")
-            print(f"[OK] Inviato: {entry.title}")
+            print(f"[{domain_name} OK] Inviato: {entry.title}")
         except Exception as e:
             print(f"[ERRORE]: {e}")
 
 async def scraper_loop():
     while True:
         for kw in KEYWORDS:
-            await check_ebay(kw)
-            await asyncio.sleep(2)
-        await asyncio.sleep(180)
+            for domain_name, base_url in EBAY_DOMAINS:
+                await check_ebay(kw, domain_name, base_url)
+                await asyncio.sleep(1.5)
+        await asyncio.sleep(120)
 
 async def handle_ping(request):
     return web.Response(text="Bot is running!")
