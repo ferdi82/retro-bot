@@ -7,76 +7,182 @@ TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
 KEYWORDS = [
-    # 5ª Generazione (32/64-bit)
-    "sega saturn",
+    # ==================== CONSOLE (5ª GEN - 32/64 BIT) ====================
+    "sega saturn console",
+    "sega saturn pal",
     "playstation 1 scatola",
-    "ps1 pal ita",
+    "ps1 console box",
+    "nintendo 64 console",
     "nintendo 64 scatola",
-    "nintendo 64 giochi",
     "3do interactive",
-    "atari jaguar",
+    "atari jaguar console",
     "amiga cd32",
     "pc-fx console",
     "bandai pippin",
-    
-    # 4ª Generazione (16-bit)
-    "snes solo scatola",
-    "scatola super nintendo",
-    "manuale snes",
-    "super metroid snes",
-    "zelda snes pal ita",
-    "sega mega drive",
+    "casio loopy",
+    "bandai playdia",
+
+    # ==================== CONSOLE (4ª GEN - 16 BIT) ====================
+    "super nintendo console",
+    "snes console scatola",
+    "super famicom box",
+    "sega mega drive console",
     "sega mega cd",
-    "sega 32x",
-    "pc engine",
-    "turbografx",
-    "neo geo aes",
+    "sega 32x console",
+    "pc engine console",
+    "turbografx 16",
+    "neo geo aes console",
     "neo geo cd",
     "philips cd-i",
     "commodore cdtv",
-    
-    # 3ª Generazione (8-bit)
-    "nintendo nes scatola",
-    "nes pal ita",
+    "pioneer laseractive",
+
+    # ==================== CONSOLE (3ª GEN - 8 BIT) ====================
+    "nintendo nes console",
+    "nes scatola pal",
     "famicom disk system",
-    "sega master system",
+    "sega master system console",
     "sega sg-1000",
     "atari 7800",
     "atari xegs",
     "amstrad gx4000",
     "commodore 64gs",
-    
-    # 1ª e 2ª Generazione & Retrogaming Storico
-    "atari 2600",
+    "epoch cassette vision",
+
+    # ==================== CONSOLE (1ª & 2ª GEN - RETRO STORICO) ====================
+    "atari 2600 console",
     "atari 5200",
-    "intellivision",
+    "intellivision console",
     "colecovision",
-    "vectrex",
+    "vectrex console",
     "magnavox odyssey",
     "videopac g7000",
-    
-    # Portatili Storici
-    "game boy scatola",
+    "fairchild channel f",
+    "creativision vtech",
+
+    # ==================== CONSOLE PORTATILI ====================
+    "game boy classic scatola",
+    "game boy color box",
     "game boy advance box",
-    "virtual boy",
-    "sega game gear",
+    "game boy micro",
+    "virtual boy console",
+    "sega game gear console",
     "sega nomad",
-    "atari lynx",
-    "neo geo pocket",
-    "wonderswan",
+    "atari lynx console",
+    "turboexpress",
+    "neo geo pocket color",
+    "wonderswan color",
     "game & watch nintendo",
-    
-    # Lotti e Ricerche Generiche
-    "lotto retrogaming",
-    "lotto giochi nintendo",
+    "watara supervision",
+
+    # ==================== GIOCHI RARI SEGA ====================
+    "panzer dragoon saga",
+    "shining force 3 saturn",
+    "deep fear saturn",
+    "keio flying squadron",
+    "burning rangers saturn",
+    "radiant silvergun",
+    "snatcher sega mega cd",
+    "knuckles chaotix 32x",
+    "darxide 32x",
+    "alien soldier mega drive",
+    "the punisher mega drive",
+    "mega man wily wars",
+    "castlevania new generation",
+    "smurfs travel world master system",
+
+    # ==================== GIOCHI RARI PLAYSTATION 1 ====================
+    "suikoden 2 pal ita",
+    "castlevania symphony of the night pal",
+    "tombi ps1 pal ita",
+    "tombi 2 ps1",
+    "klonoa door to phantomile ps1",
+    "kula world ps1",
+    "mega man legends ps1",
+    "clock tower ps1",
+    "in the hunt ps1",
+    "silent hill ps1 pal ita",
+    "resident evil ps1 big box",
+
+    # ==================== GIOCHI RARI NINTENDO 64 ====================
+    "conker bad fur day pal",
+    "paper mario n64 pal ita",
+    "mario party 3 n64",
+    "castlevania legacy darkness n64",
+    "snowboard kids 2 n64",
+    "stunt racer 64",
+    "worms armageddon n64",
+    "resident evil 2 n64 pal ita",
+
+    # ==================== GIOCHI RARI SNES ====================
+    "mega man x3 snes",
+    "mega man 7 snes",
+    "hagane snes",
+    "demon crest snes",
+    "terranigma pal ita",
+    "whirlo snes",
+    "castlevania vampire kiss snes",
+    "sunset riders snes pal",
+    "wild guns snes",
+    "secret of evermore pal ita",
+    "illusion of time pal ita",
+    "lufia 2 pal ita",
+    "super metroid big box",
+    "zelda snes pal ita",
+
+    # ==================== GIOCHI RARI NES ====================
+    "little samson nes",
+    "flintstones dinosaur nes",
+    "castlevania 3 nes pal ita",
+    "duck tales 2 nes",
+    "snow bros nes",
+    "panic restaurant nes",
+    "bubble bobble 2 nes",
+    "mega man nes pal ita",
+    "stadium events nes",
+
+    # ==================== GIOCHI RARI PORTATILI ====================
+    "trip world game boy",
+    "pokemon smeraldo box pal ita",
+    "pokemon cristallo box pal ita",
+    "pokemon rosso fuoco box",
+    "pokemon foglia verde box",
+    "ninja cop gba",
+    "boktai pal ita",
+    "castlevania aria sorrow pal ita",
+    "shantae gbc",
+    "metal gear solid gbc",
+
+    # ==================== GIOCHI RARI NEO GEO & ALTRI ====================
+    "neo geo aes game",
+    "twinkle star sprites aes",
+    "metal slug neo geo",
+    "castlevania rondo blood pc engine",
+    "magical chase pc engine",
+    "alien vs predator jaguar",
+    "battlesphere jaguar",
+
+    # ==================== SCATOLE, MANUALI, LOTTI & OCCASIONI ====================
+    "snes solo scatola",
+    "scatola super nintendo",
+    "n64 box only",
+    "game boy box only",
+    "ps1 scatola vuota",
+    "manuale istruzioni snes",
+    "anleitung nintendo",
+    "boite snes sans jeu",
+    "lotto manuali videogiochi",
     "lotto manuali nintendo",
+    "lotto retrogaming pal ita",
+    "fondo magazzino videogiochi",
+    "deadstock videogiochi",
     "lotto console rotte da testare",
     "stock videogiochi vecchi"
 ]
 
 BLACKLIST = [
     "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
-    "custodia vuota", "cover art", "box art only"
+    "custodia vuota ps4", "custodia vuota ps5", "cover art only", "manuale stampato"
 ]
 
 visti = set()
@@ -100,7 +206,7 @@ async def check_ebay(keyword):
         visti.add(item_id)
         
         message = (
-            f"🎯 *Nuovo Affare Rilevato!*\n\n"
+            f"🎯 *Rarità / Console / Affare Rilevato!*\n\n"
             f"📦 *Titolo:* {entry.title}\n"
             f"🔍 *Filtro:* {keyword}\n\n"
             f"🔗 [Apri l'annuncio su eBay]({entry.link})"
