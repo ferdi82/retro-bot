@@ -7,16 +7,77 @@ TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
 KEYWORDS = [
+    # 5ª Generazione (32/64-bit)
+    "sega saturn",
+    "playstation 1 scatola",
+    "ps1 pal ita",
+    "nintendo 64 scatola",
+    "nintendo 64 giochi",
+    "3do interactive",
+    "atari jaguar",
+    "amiga cd32",
+    "pc-fx console",
+    "bandai pippin",
+    
+    # 4ª Generazione (16-bit)
     "snes solo scatola",
     "scatola super nintendo",
     "manuale snes",
     "super metroid snes",
     "zelda snes pal ita",
-    "lotto giochi snes",
-    "lotto manuali nintendo"
+    "sega mega drive",
+    "sega mega cd",
+    "sega 32x",
+    "pc engine",
+    "turbografx",
+    "neo geo aes",
+    "neo geo cd",
+    "philips cd-i",
+    "commodore cdtv",
+    
+    # 3ª Generazione (8-bit)
+    "nintendo nes scatola",
+    "nes pal ita",
+    "famicom disk system",
+    "sega master system",
+    "sega sg-1000",
+    "atari 7800",
+    "atari xegs",
+    "amstrad gx4000",
+    "commodore 64gs",
+    
+    # 1ª e 2ª Generazione & Retrogaming Storico
+    "atari 2600",
+    "atari 5200",
+    "intellivision",
+    "colecovision",
+    "vectrex",
+    "magnavox odyssey",
+    "videopac g7000",
+    
+    # Portatili Storici
+    "game boy scatola",
+    "game boy advance box",
+    "virtual boy",
+    "sega game gear",
+    "sega nomad",
+    "atari lynx",
+    "neo geo pocket",
+    "wonderswan",
+    "game & watch nintendo",
+    
+    # Lotti e Ricerche Generiche
+    "lotto retrogaming",
+    "lotto giochi nintendo",
+    "lotto manuali nintendo",
+    "lotto console rotte da testare",
+    "stock videogiochi vecchi"
 ]
 
-BLACKLIST = ["repro", "riproduzione", "custom", "copia", "falso", "replica", "fake"]
+BLACKLIST = [
+    "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
+    "custodia vuota", "cover art", "box art only"
+]
 
 visti = set()
 bot = Bot(token=TELEGRAM_TOKEN)
@@ -74,4 +135,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-  
