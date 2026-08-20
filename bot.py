@@ -284,7 +284,7 @@ async def check_ebay(session, keyword, domain_name, base_url, is_first_run=False
             print(f"[TELEGRAM ERROR]: {e}")
 
 async def scraper_loop():
-    await asyncio.sleep(5)
+    await asyncio.sleep(3)
     try:
         await bot.send_message(chat_id=CHAT_ID, text="🚀 <b>Radar eBay Connesso!</b> Inizio scansione...", parse_mode="HTML")
     except Exception as e:
@@ -313,16 +313,17 @@ async def scraper_loop():
 async def handle_ping(request):
     return web.Response(text="Bot is running!")
 
-app = web.Application()
-app.router.add_get('/', handle_ping)
-
-async def start_server():
+async def main():
+    asyncio.create_task(scraper_loop())
+    app = web.Application()
+    app.router.add_get('/', handle_ping)
     runner = web.AppRunner(app)
     await runner.setup()
     site = web.TCPSite(runner, '0.0.0.0', 8080)
     await site.start()
-    await scraper_loop()
+    while True:
+        await asyncio.sleep(3600)
 
 if __name__ == "__main__":
-    loop = asyncio.get_event_loop()
-    loop.run_until_complete(start_server())
+    asyncio.run(main())
+    
