@@ -1,9 +1,10 @@
-import asyncio
 import html
-import aiohttp
+import time
+import urllib.request
+import urllib.parse
+import threading
+from http.server import HTTPServer, BaseHTTPRequestHandler
 import feedparser
-from telegram import Bot
-from aiohttp import web
 
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
@@ -224,30 +225,42 @@ BLACKLIST = [
 ]
 
 visti = set()
-bot = Bot(token=TELEGRAM_TOKEN)
 
-HEADERS = {
-    "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36",
-    "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
-    "Accept-Language": "it-IT,it;q=0.9,en-US;q=0.8,en;q=0.7"
-}
-
-async def fetch_feed(session, url):
+def send_telegram(message_html):
+    url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
+    payload = {
+        "chat_id": CHAT_ID,
+        "text": message_html,
+        "parse_mode": "HTML",
+        "disable_web_page_preview": "false"
+    }
+    data = urllib.parse.urlencode(payload).encode("utf-8")
+    req = urllib.request.Request(url, data=data, headers={"User-Agent": "Mozilla/5.0"})
     try:
-        async with session.get(url, headers=HEADERS, timeout=aiohttp.ClientTimeout(total=10)) as resp:
-            if resp.status == 200:
-                text = await resp.text()
-                return feedparser.parse(text)
+        with urllib.request.urlopen(req, timeout=10) as response:
+            return response.read()
     except Exception as e:
-        print(f"[FETCH ERROR]: {e}")
-    return None
+        print(f"[ERRORE TELEGRAM]: {e}")
 
-async def check_ebay(session, keyword, domain_name, base_url, is_first_run=False):
+def fetch_feed(url):
+    try:
+        req = urllib.request.Request(url, headers={
+            "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+            "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content = resp.read()
+        return feedparser.parse(content)
+    except Exception as e:
+        print(f"[ERRORE FETCH]: {e}")
+        return None
+
+def check_ebay(keyword, domain_name, base_url, is_first_run=False):
     query = keyword.replace(" ", "+")
     rss_url = f"{base_url}/sch/i.html?_nkw={query}&_sop=10&LH_BIN=1&_rss=1"
     
-    feed = await fetch_feed(session, rss_url)
-    if not feed or not feed.entries:
+    feed = fetch_feed(rss_url)
+    if not feed or not getattr(feed, 'entries', None):
         return
     
     max_items = 1 if is_first_run else 4
@@ -277,53 +290,47 @@ async def check_ebay(session, keyword, domain_name, base_url, is_first_run=False
             f"🔗 <a href='{item_id}'>Apri su eBay {domain_name}</a>"
         )
         
-        try:
-            await bot.send_message(chat_id=CHAT_ID, text=message, parse_mode="HTML")
-            await asyncio.sleep(1.2)
-        except Exception as e:
-            print(f"[TELEGRAM ERROR]: {e}")
+        send_telegram(message)
+        time.sleep(1.2)
 
-async def scraper_loop():
-    await asyncio.sleep(3)
-    try:
-        await bot.send_message(chat_id=CHAT_ID, text="🚀 <b>Radar eBay Connesso!</b> Inizio scansione...", parse_mode="HTML")
-    except Exception as e:
-        print(f"[STARTUP ERROR]: {e}")
+class PingHandler(BaseHTTPRequestHandler):
+    def do_GET(self):
+        self.send_response(200)
+        self.send_header('Content-type', 'text/plain')
+        self.end_headers()
+        self.wfile.write(b"Bot is running!")
 
-    async with aiohttp.ClientSession() as session:
-        # Scansione iniziale catalogo
+    def log_message(self, format, *args):
+        return
+
+def run_web_server():
+    server = HTTPServer(('0.0.0.0', 8080), PingHandler)
+    server.serve_forever()
+
+def main():
+    # Avvio server web per Render e UptimeRobot
+    server_thread = threading.Thread(target=run_web_server, daemon=True)
+    server_thread.start()
+    print("Server web attivo su porta 8080.")
+
+    time.sleep(2)
+    send_telegram("🚀 <b>Radar eBay Connesso!</b> Inizio scansione catalogo...")
+
+    # 1. Scansione iniziale archivio
+    for kw in KEYWORDS:
+        for domain_name, base_url in EBAY_DOMAINS:
+            check_ebay(kw, domain_name, base_url, is_first_run=True)
+            time.sleep(0.4)
+
+    send_telegram("✅ <b>Base pronta!</b> Da ora in avanti riceverai solo i nuovi annunci pubblicati.")
+
+    # 2. Monitoraggio continuo
+    while True:
+        time.sleep(60)
         for kw in KEYWORDS:
             for domain_name, base_url in EBAY_DOMAINS:
-                await check_ebay(session, kw, domain_name, base_url, is_first_run=True)
-                await asyncio.sleep(0.5)
-
-        try:
-            await bot.send_message(chat_id=CHAT_ID, text="✅ <b>Base pronta!</b> Da ora in avanti riceverai solo i nuovi arrivi.", parse_mode="HTML")
-        except Exception as e:
-            print(f"[READY ERROR]: {e}")
-
-        # Loop continuo sentinella
-        while True:
-            await asyncio.sleep(60)
-            for kw in KEYWORDS:
-                for domain_name, base_url in EBAY_DOMAINS:
-                    await check_ebay(session, kw, domain_name, base_url, is_first_run=False)
-                    await asyncio.sleep(0.8)
-
-async def handle_ping(request):
-    return web.Response(text="Bot is running!")
-
-async def main():
-    asyncio.create_task(scraper_loop())
-    app = web.Application()
-    app.router.add_get('/', handle_ping)
-    runner = web.AppRunner(app)
-    await runner.setup()
-    site = web.TCPSite(runner, '0.0.0.0', 8080)
-    await site.start()
-    while True:
-        await asyncio.sleep(3600)
+                check_ebay(kw, domain_name, base_url, is_first_run=False)
+                time.sleep(0.8)
 
 if __name__ == "__main__":
-    asyncio.run(main())
-    
+    main()
