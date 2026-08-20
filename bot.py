@@ -1,4 +1,5 @@
 import html
+import json
 import time
 import urllib.request
 import urllib.parse
@@ -244,29 +245,35 @@ def send_telegram(message_html):
         print(f"[ERRORE TELEGRAM]: {e}")
 
 def fetch_feed(raw_url):
-    # Proxy Bridge per superare il blocco 403 dei server cloud
-    encoded_url = urllib.parse.quote(raw_url)
-    proxy_urls = [
-        f"https://api.allorigins.win/raw?url={encoded_url}",
-        f"https://api.codetabs.com/v1/proxy?quest={encoded_url}"
-    ]
-    
-    headers = {
-        "User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0.0.0 Safari/537.36"
-    }
+    # Metodo 1: Accesso diretto con User-Agent da crawler
+    try:
+        req = urllib.request.Request(raw_url, headers={
+            "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
+            "Accept": "*/*"
+        })
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            content = resp.read()
+            feed = feedparser.parse(content)
+            if feed and getattr(feed, 'entries', None) and len(feed.entries) > 0:
+                return "200 (Direct)", feed
+    except Exception:
+        pass
 
-    for p_url in proxy_urls:
-        try:
-            req = urllib.request.Request(p_url, headers=headers)
-            with urllib.request.urlopen(req, timeout=15) as resp:
-                content = resp.read()
-                feed = feedparser.parse(content)
-                if feed and getattr(feed, 'entries', None) and len(feed.entries) > 0:
-                    return 200, feed
-        except Exception:
-            continue
+    # Metodo 2: Proxy Bridge JSON
+    try:
+        encoded_url = urllib.parse.quote(raw_url)
+        bridge_url = f"https://api.allorigins.win/get?url={encoded_url}"
+        req = urllib.request.Request(bridge_url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode('utf-8'))
+            feed_content = data.get('contents', '')
+            feed = feedparser.parse(feed_content)
+            if feed and getattr(feed, 'entries', None) and len(feed.entries) > 0:
+                return "200 (Proxy JSON)", feed
+    except Exception as e:
+        return f"Err: {str(e)[:15]}", None
 
-    return "Proxy Blocked", None
+    return "Empty", None
 
 def check_ebay(keyword, domain_name, base_url, is_first_run=False):
     query = urllib.parse.quote_plus(keyword)
@@ -330,20 +337,20 @@ def main():
     server_thread.start()
 
     time.sleep(2)
-    send_telegram("🚀 <b>Test di Connessione con Proxy Bridge...</b>")
+    send_telegram("🚀 <b>Test Sblocco eBay in corso...</b>")
 
     test_status, test_found = check_ebay("game boy console", "IT", "https://www.ebay.it", is_first_run=True)
-    send_telegram(f"🔍 <b>Diagnostica eBay (via Proxy):</b>\n- Risposta: <code>{test_status}</code>\n- Annunci scaricati: <code>{test_found}</code>")
+    send_telegram(f"🔍 <b>Diagnostica Finale:</b>\n- Connessione: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
 
-    # 1. Scansione archivio esistente
+    # Scansione iniziale archivio
     for kw in KEYWORDS:
         for domain_name, base_url in EBAY_DOMAINS:
             check_ebay(kw, domain_name, base_url, is_first_run=True)
-            time.sleep(0.5)
+            time.sleep(0.4)
 
     send_telegram("✅ <b>Base pronta!</b> Da ora in avanti riceverai solo i nuovi annunci pubblicati.")
 
-    # 2. Monitoraggio continuo
+    # Monitoraggio continuo
     while True:
         time.sleep(60)
         for kw in KEYWORDS:
