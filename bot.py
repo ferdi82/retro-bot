@@ -8,9 +8,11 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
+# Configurazione Telegram
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
+# Credenziali Ufficiali eBay Production
 EBAY_CLIENT_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
 EBAY_CLIENT_SECRET = "PRD-0149ee33b990-e288-4d81-83c2-df6e"
 
@@ -22,7 +24,7 @@ MARKETPLACES = [
 ]
 
 KEYWORDS = [
-    # ==================== SVUOTA-SOFFITTA / OCCASIONI ====================
+    # Occasioni & Lotti
     "svuoto soffitta giochi",
     "svuoto cantina nintendo",
     "vecchi giochi nintendo",
@@ -33,7 +35,7 @@ KEYWORDS = [
     "lotto videogiochi infanzia",
     "scatola vecchi giochi",
 
-    # ==================== DISTRIBUZIONE & COLLEZIONISMO ====================
+    # Distribuzione & Collezionismo
     "pal gig",
     "distribuzione gig",
     "mattel nes",
@@ -47,7 +49,7 @@ KEYWORDS = [
     "sealed snes",
     "sealed n64",
 
-    # ==================== CONSOLE (32/64 BIT - 5ª GEN) ====================
+    # Console 5ª Gen
     "sega saturn console",
     "sega saturn pal",
     "playstation 1 scatola",
@@ -62,7 +64,7 @@ KEYWORDS = [
     "casio loopy",
     "bandai playdia",
 
-    # ==================== CONSOLE (16 BIT - 4ª GEN) ====================
+    # Console 16 Bit & Retro
     "super nintendo console",
     "snes console scatola",
     "super famicom box",
@@ -75,32 +77,11 @@ KEYWORDS = [
     "neo geo cd",
     "philips cd-i",
     "commodore cdtv",
-    "pioneer laseractive",
-
-    # ==================== CONSOLE (8 BIT - 3ª GEN) ====================
     "nintendo nes console",
-    "nes scatola pal",
-    "famicom disk system",
-    "sega master system console",
-    "sega sg-1000",
-    "atari 7800",
-    "atari xegs",
-    "amstrad gx4000",
-    "commodore 64gs",
-    "epoch cassette vision",
-
-    # ==================== CONSOLE (1ª & 2ª GEN) ====================
     "atari 2600 console",
-    "atari 5200",
-    "intellivision console",
-    "colecovision",
     "vectrex console",
-    "magnavox odyssey",
-    "videopac g7000",
-    "fairchild channel f",
-    "creativision vtech",
 
-    # ==================== CONSOLE PORTATILI ====================
+    # Portatili
     "game boy classic scatola",
     "game boy color box",
     "game boy advance box",
@@ -109,115 +90,42 @@ KEYWORDS = [
     "sega game gear console",
     "sega nomad",
     "atari lynx console",
-    "turboexpress",
-    "neo geo pocket color",
-    "wonderswan color",
     "game & watch nintendo",
-    "watara supervision",
 
-    # ==================== GIOCHI RARI SEGA ====================
+    # Giochi Rari
     "panzer dragoon saga",
     "shining force 3 saturn",
     "deep fear saturn",
-    "keio flying squadron",
-    "burning rangers saturn",
-    "radiant silvergun",
-    "snatcher sega mega cd",
-    "knuckles chaotix 32x",
-    "darxide 32x",
-    "alien soldier mega drive",
-    "the punisher mega drive",
-    "mega man wily wars",
-    "castlevania new generation",
-    "smurfs travel world master system",
-
-    # ==================== GIOCHI RARI PLAYSTATION 1 ====================
+    "snatcher sega",
     "suikoden 2 pal ita",
     "castlevania symphony of the night pal",
     "tombi ps1 pal ita",
     "tombi 2 ps1",
-    "klonoa door to phantomile ps1",
+    "klonoa ps1",
     "kula world ps1",
-    "mega man legends ps1",
-    "clock tower ps1",
-    "in the hunt ps1",
     "silent hill ps1 pal ita",
-    "resident evil ps1 big box",
-
-    # ==================== GIOCHI RARI NINTENDO 64 ====================
     "conker bad fur day pal",
     "paper mario n64 pal ita",
-    "mario party 3 n64",
-    "castlevania legacy darkness n64",
-    "snowboard kids 2 n64",
-    "stunt racer 64",
-    "worms armageddon n64",
-    "resident evil 2 n64 pal ita",
-
-    # ==================== GIOCHI RARI SNES ====================
     "mega man x3 snes",
-    "mega man 7 snes",
     "hagane snes",
     "demon crest snes",
     "terranigma pal ita",
     "whirlo snes",
     "castlevania vampire kiss snes",
-    "sunset riders snes pal",
-    "wild guns snes",
-    "secret of evermore pal ita",
-    "illusion of time pal ita",
-    "lufia 2 pal ita",
-    "super metroid big box",
-    "zelda snes pal ita",
-
-    # ==================== GIOCHI RARI NES ====================
     "little samson nes",
-    "flintstones dinosaur nes",
-    "castlevania 3 nes pal ita",
-    "duck tales 2 nes",
     "snow bros nes",
-    "panic restaurant nes",
-    "bubble bobble 2 nes",
-    "mega man nes pal ita",
-    "stadium events nes",
+    "pokemon smeraldo box",
+    "pokemon cristallo box",
 
-    # ==================== GIOCHI RARI PORTATILI ====================
-    "trip world game boy",
-    "pokemon smeraldo box pal ita",
-    "pokemon cristallo box pal ita",
-    "pokemon rosso fuoco box",
-    "pokemon foglia verde box",
-    "ninja cop gba",
-    "boktai pal ita",
-    "castlevania aria sorrow pal ita",
-    "shantae gbc",
-    "metal gear solid gbc",
-
-    # ==================== GIOCHI RARI NEO GEO & ALTRI ====================
-    "neo geo aes game",
-    "twinkle star sprites aes",
-    "metal slug neo geo",
-    "castlevania rondo blood pc engine",
-    "magical chase pc engine",
-    "alien vs predator jaguar",
-    "battlesphere jaguar",
-
-    # ==================== SCATOLE, MANUALI, LOTTI & FONDI ====================
+    # Scatole e manuali
     "snes solo scatola",
     "scatola super nintendo",
     "n64 box only",
     "game boy box only",
     "ps1 scatola vuota",
     "manuale istruzioni snes",
-    "anleitung nintendo",
-    "boite snes sans jeu",
-    "lotto manuali videogiochi",
-    "lotto manuali nintendo",
     "lotto retrogaming pal ita",
-    "fondo magazzino videogiochi",
-    "deadstock videogiochi",
-    "lotto console rotte da testare",
-    "stock videogiochi vecchi"
+    "fondo magazzino videogiochi"
 ]
 
 BLACKLIST = [
@@ -254,33 +162,39 @@ def get_ebay_oauth_token():
     if current_token and time.time() < token_expires_at:
         return current_token
 
-    auth_str = f"{EBAY_CLIENT_ID}:{EBAY_CLIENT_SECRET}"
-    b64_auth = base64.b64encode(auth_str.encode()).decode()
+    # Pulizia credenziali da eventuali spazi o caratteri invisibili
+    client_id = EBAY_CLIENT_ID.strip()
+    client_secret = EBAY_CLIENT_SECRET.strip()
+
+    # Formattazione corretta RFC per Basic Auth
+    auth_bytes = f"{client_id}:{client_secret}".encode("utf-8")
+    b64_auth = base64.b64encode(auth_bytes).decode("utf-8")
 
     headers = {
         "Content-Type": "application/x-www-form-urlencoded",
         "Authorization": f"Basic {b64_auth}"
     }
-    body = {
+    
+    # Body con scope esplicito corretto per le API Browse
+    params = {
         "grant_type": "client_credentials",
         "scope": "https://api.ebay.com/oauth/api_scope"
     }
-    data = urllib.parse.urlencode(body).encode()
+    data = urllib.parse.urlencode(params).encode("utf-8")
     req = urllib.request.Request("https://api.ebay.com/identity/v1/oauth2/token", data=data, headers=headers)
 
     try:
         with urllib.request.urlopen(req, timeout=10) as resp:
-            res_json = json.loads(resp.read().decode())
+            res_json = json.loads(resp.read().decode("utf-8"))
             current_token = res_json.get("access_token")
             token_expires_at = time.time() + res_json.get("expires_in", 7200) - 120
             return current_token
     except urllib.error.HTTPError as e:
-        last_auth_error = f"HTTP {e.code}: {e.read().decode()[:80]}"
-        print(f"[ERRORE AUTH EBAY]: {last_auth_error}")
+        err_msg = e.read().decode("utf-8", errors="ignore")
+        last_auth_error = f"HTTP {e.code}: {err_msg}"
         return None
     except Exception as e:
         last_auth_error = str(e)
-        print(f"[ERRORE AUTH EBAY]: {e}")
         return None
 
 def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
@@ -300,7 +214,7 @@ def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
     try:
         req = urllib.request.Request(api_url, headers=headers)
         with urllib.request.urlopen(req, timeout=12) as resp:
-            data = json.loads(resp.read().decode())
+            data = json.loads(resp.read().decode("utf-8"))
             items = data.get("itemSummaries", [])
     except urllib.error.HTTPError as e:
         return f"HTTP {e.code}", 0
@@ -370,7 +284,7 @@ def main():
     test_status, test_found = search_ebay_api("game boy", "IT", "EBAY-IT", is_first_run=True)
     send_telegram(f"🔍 <b>Diagnostica API:</b>\n- Risposta: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
 
-    # 1. Scansione archivio esistente
+    # Scansione iniziale archivio
     for kw in KEYWORDS:
         for country_label, global_id in MARKETPLACES:
             search_ebay_api(kw, country_label, global_id, is_first_run=True)
@@ -378,7 +292,7 @@ def main():
 
     send_telegram("✅ <b>Base pronta!</b> Da ora in avanti riceverai solo i nuovi annunci pubblicati.")
 
-    # 2. Sentinella in tempo reale
+    # Sentinella in tempo reale
     while True:
         time.sleep(60)
         for kw in KEYWORDS:
