@@ -3,19 +3,17 @@ import html
 import json
 import threading
 import time
+import urllib.error
 import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# Configurazione Telegram
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
-# Credenziali Ufficiali eBay Production
 EBAY_CLIENT_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
 EBAY_CLIENT_SECRET = "PRD-0149ee33b990-e288-4d81-83c2-df6e"
 
-# Marketplace da monitorare con i rispettivi Global ID ufficiali
 MARKETPLACES = [
     ("IT", "EBAY-IT"),
     ("DE", "EBAY-DE"),
@@ -233,6 +231,7 @@ BLACKLIST = [
 visti = set()
 current_token = None
 token_expires_at = 0
+last_auth_error = "Nessun errore"
 
 def send_telegram(message_html):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -251,7 +250,7 @@ def send_telegram(message_html):
         print(f"[ERRORE TELEGRAM]: {e}")
 
 def get_ebay_oauth_token():
-    global current_token, token_expires_at
+    global current_token, token_expires_at, last_auth_error
     if current_token and time.time() < token_expires_at:
         return current_token
 
@@ -275,17 +274,21 @@ def get_ebay_oauth_token():
             current_token = res_json.get("access_token")
             token_expires_at = time.time() + res_json.get("expires_in", 7200) - 120
             return current_token
+    except urllib.error.HTTPError as e:
+        last_auth_error = f"HTTP {e.code}: {e.read().decode()[:80]}"
+        print(f"[ERRORE AUTH EBAY]: {last_auth_error}")
+        return None
     except Exception as e:
+        last_auth_error = str(e)
         print(f"[ERRORE AUTH EBAY]: {e}")
         return None
 
 def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
     token = get_ebay_oauth_token()
     if not token:
-        return "Auth Error", 0
+        return f"Auth Error ({last_auth_error})", 0
 
     query = urllib.parse.quote_plus(keyword)
-    # Filtro ufficiale: Compralo Subito (buyingOptions:{FIXED_PRICE}) e ordinati per più recenti (newlyListed)
     api_url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&filter=buyingOptions:{{FIXED_PRICE}}&sort=newlyListed&limit=3"
 
     headers = {
@@ -365,7 +368,7 @@ def main():
     send_telegram("🚀 <b>Test eBay API Ufficiale...</b>")
 
     test_status, test_found = search_ebay_api("game boy", "IT", "EBAY-IT", is_first_run=True)
-    send_telegram(f"🔍 <b>Diagnostica API Ufficiale:</b>\n- Risposta: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
+    send_telegram(f"🔍 <b>Diagnostica API:</b>\n- Risposta: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
 
     # 1. Scansione archivio esistente
     for kw in KEYWORDS:
