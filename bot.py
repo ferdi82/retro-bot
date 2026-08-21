@@ -1,21 +1,26 @@
+import base64
 import html
 import json
-import time
-import urllib.request
-import urllib.parse
-import urllib.error
 import threading
-from http.server import HTTPServer, BaseHTTPRequestHandler
-import feedparser
+import time
+import urllib.parse
+import urllib.request
+from http.server import BaseHTTPRequestHandler, HTTPServer
 
+# Configurazione Telegram
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
-EBAY_DOMAINS = [
-    ("IT", "https://www.ebay.it"),
-    ("DE", "https://www.ebay.de"),
-    ("FR", "https://www.ebay.fr"),
-    ("UK", "https://www.ebay.co.uk"),
+# Credenziali Ufficiali eBay Production
+EBAY_CLIENT_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
+EBAY_CLIENT_SECRET = "PRD-0149ee33b990-e288-4d81-83c2-df6e"
+
+# Marketplace da monitorare con i rispettivi Global ID ufficiali
+MARKETPLACES = [
+    ("IT", "EBAY-IT"),
+    ("DE", "EBAY-DE"),
+    ("FR", "EBAY-FR"),
+    ("GB", "EBAY-GB"),
 ]
 
 KEYWORDS = [
@@ -220,13 +225,14 @@ KEYWORDS = [
 BLACKLIST = [
     "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
     "custodia vuota ps4", "custodia vuota ps5", "cover art only", "manuale stampato",
-    "reprint", "manuale pdf",
-    "box protector", "custodia protettiva", "salvascatola", "protettore box",
-    "proteggi scatola", "protezione pet", "box plastica", "schutzhülle", "boite de protection",
-    "solo guida", "guida strategica", "poster", "solo poster", "lösungsbuch"
+    "reprint", "manuale pdf", "box protector", "custodia protettiva", "salvascatola", 
+    "protettore box", "proteggi scatola", "protezione pet", "box plastica", 
+    "schutzhülle", "boite de protection", "solo guida", "guida strategica", "poster"
 ]
 
 visti = set()
+current_token = None
+token_expires_at = 0
 
 def send_telegram(message_html):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -244,53 +250,71 @@ def send_telegram(message_html):
     except Exception as e:
         print(f"[ERRORE TELEGRAM]: {e}")
 
-def fetch_feed(raw_url):
-    # Metodo 1: Accesso diretto con User-Agent da crawler
+def get_ebay_oauth_token():
+    global current_token, token_expires_at
+    if current_token and time.time() < token_expires_at:
+        return current_token
+
+    auth_str = f"{EBAY_CLIENT_ID}:{EBAY_CLIENT_SECRET}"
+    b64_auth = base64.b64encode(auth_str.encode()).decode()
+
+    headers = {
+        "Content-Type": "application/x-www-form-urlencoded",
+        "Authorization": f"Basic {b64_auth}"
+    }
+    body = {
+        "grant_type": "client_credentials",
+        "scope": "https://api.ebay.com/oauth/api_scope"
+    }
+    data = urllib.parse.urlencode(body).encode()
+    req = urllib.request.Request("https://api.ebay.com/identity/v1/oauth2/token", data=data, headers=headers)
+
     try:
-        req = urllib.request.Request(raw_url, headers={
-            "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)",
-            "Accept": "*/*"
-        })
         with urllib.request.urlopen(req, timeout=10) as resp:
-            content = resp.read()
-            feed = feedparser.parse(content)
-            if feed and getattr(feed, 'entries', None) and len(feed.entries) > 0:
-                return "200 (Direct)", feed
-    except Exception:
-        pass
-
-    # Metodo 2: Proxy Bridge JSON
-    try:
-        encoded_url = urllib.parse.quote(raw_url)
-        bridge_url = f"https://api.allorigins.win/get?url={encoded_url}"
-        req = urllib.request.Request(bridge_url, headers={"User-Agent": "Mozilla/5.0"})
-        with urllib.request.urlopen(req, timeout=12) as resp:
-            data = json.loads(resp.read().decode('utf-8'))
-            feed_content = data.get('contents', '')
-            feed = feedparser.parse(feed_content)
-            if feed and getattr(feed, 'entries', None) and len(feed.entries) > 0:
-                return "200 (Proxy JSON)", feed
+            res_json = json.loads(resp.read().decode())
+            current_token = res_json.get("access_token")
+            token_expires_at = time.time() + res_json.get("expires_in", 7200) - 120
+            return current_token
     except Exception as e:
-        return f"Err: {str(e)[:15]}", None
+        print(f"[ERRORE AUTH EBAY]: {e}")
+        return None
 
-    return "Empty", None
+def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
+    token = get_ebay_oauth_token()
+    if not token:
+        return "Auth Error", 0
 
-def check_ebay(keyword, domain_name, base_url, is_first_run=False):
     query = urllib.parse.quote_plus(keyword)
-    rss_url = f"{base_url}/sch/i.html?_nkw={query}&_sop=10&LH_BIN=1&_rss=1"
-    
-    status, feed = fetch_feed(rss_url)
-    
-    if feed is None or not getattr(feed, 'entries', None):
-        return status, 0
+    # Filtro ufficiale: Compralo Subito (buyingOptions:{FIXED_PRICE}) e ordinati per più recenti (newlyListed)
+    api_url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&filter=buyingOptions:{{FIXED_PRICE}}&sort=newlyListed&limit=3"
+
+    headers = {
+        "Authorization": f"Bearer {token}",
+        "X-EBAY-C-MARKETPLACE-ID": global_id,
+        "Accept": "application/json"
+    }
+
+    try:
+        req = urllib.request.Request(api_url, headers=headers)
+        with urllib.request.urlopen(req, timeout=12) as resp:
+            data = json.loads(resp.read().decode())
+            items = data.get("itemSummaries", [])
+    except urllib.error.HTTPError as e:
+        return f"HTTP {e.code}", 0
+    except Exception as e:
+        return f"Err: {str(e)[:15]}", 0
 
     inviati = 0
-    max_items = 1 if is_first_run else 4
-    
-    for entry in feed.entries[:max_items]:
-        item_id = getattr(entry, 'link', '')
-        title = getattr(entry, 'title', '')
-        if not item_id or not title:
+    max_items = 1 if is_first_run else 3
+
+    for item in items[:max_items]:
+        item_id = item.get("itemId")
+        title = item.get("title", "")
+        item_url = item.get("itemWebUrl", "")
+        price_dict = item.get("price", {})
+        price_str = f"{price_dict.get('value', '')} {price_dict.get('currency', '')}"
+
+        if not item_id or not item_url:
             continue
 
         title_clean = title.lower()
@@ -298,25 +322,26 @@ def check_ebay(keyword, domain_name, base_url, is_first_run=False):
             continue
         if any(bad_word in title_clean for bad_word in BLACKLIST):
             continue
-            
+
         visti.add(item_id)
-        
+
         tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio</b>"
         safe_title = html.escape(title)
         safe_kw = html.escape(keyword)
-        
+
         message = (
-            f"{tag} [{domain_name}]\n\n"
+            f"{tag} [{country_label}]\n\n"
             f"📦 <b>Titolo:</b> {safe_title}\n"
+            f"💰 <b>Prezzo:</b> {price_str}\n"
             f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
-            f"🔗 <a href='{item_id}'>Apri su eBay {domain_name}</a>"
+            f"🔗 <a href='{item_url}'>Apri su eBay {country_label}</a>"
         )
-        
+
         send_telegram(message)
         inviati += 1
         time.sleep(1.2)
-        
-    return status, inviati
+
+    return "200 (API OK)", inviati
 
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -337,26 +362,26 @@ def main():
     server_thread.start()
 
     time.sleep(2)
-    send_telegram("🚀 <b>Test Sblocco eBay in corso...</b>")
+    send_telegram("🚀 <b>Test eBay API Ufficiale...</b>")
 
-    test_status, test_found = check_ebay("game boy console", "IT", "https://www.ebay.it", is_first_run=True)
-    send_telegram(f"🔍 <b>Diagnostica Finale:</b>\n- Connessione: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
+    test_status, test_found = search_ebay_api("game boy", "IT", "EBAY-IT", is_first_run=True)
+    send_telegram(f"🔍 <b>Diagnostica API Ufficiale:</b>\n- Risposta: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
 
-    # Scansione iniziale archivio
+    # 1. Scansione archivio esistente
     for kw in KEYWORDS:
-        for domain_name, base_url in EBAY_DOMAINS:
-            check_ebay(kw, domain_name, base_url, is_first_run=True)
+        for country_label, global_id in MARKETPLACES:
+            search_ebay_api(kw, country_label, global_id, is_first_run=True)
             time.sleep(0.4)
 
     send_telegram("✅ <b>Base pronta!</b> Da ora in avanti riceverai solo i nuovi annunci pubblicati.")
 
-    # Monitoraggio continuo
+    # 2. Sentinella in tempo reale
     while True:
         time.sleep(60)
         for kw in KEYWORDS:
-            for domain_name, base_url in EBAY_DOMAINS:
-                check_ebay(kw, domain_name, base_url, is_first_run=False)
-                time.sleep(0.8)
+            for country_label, global_id in MARKETPLACES:
+                search_ebay_api(kw, country_label, global_id, is_first_run=False)
+                time.sleep(0.6)
 
 if __name__ == "__main__":
     main()
