@@ -10,10 +10,11 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 
 # ==================== CONFIGURAZIONE ====================
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
-CHAT_ID = "5463779"
+CHAT_ID_TUTTI = "5463779"              # Chat privata: flusso completo
+CANALE_AFFARI = "@affariminchiotti"     # Canale: solo affari >= 19%
 EBAY_APP_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
 
-# Percentuale minima di margine per considerare un'inserzione un affare (19% o superiore)
+# Percentuale minima di margine per considerare un'inserzione un affare
 MIN_PROFIT_MARGIN = 19.0
 
 MARKETPLACES = [
@@ -59,7 +60,7 @@ KEYWORDS = [
     "lot jeux nes nintendo",
     "vide grenier nintendo",
 
-    # Giochi di Riferimento & Rari (Cartucce)
+    # Giochi Singoli & Rari a Cartuccia
     "adventure island nes",
     "adventure island snes",
     "little samson nes",
@@ -107,10 +108,10 @@ BLACKLIST = [
 visti = set()
 market_value_cache = {}
 
-def send_telegram(message_html):
+def send_telegram(target_chat, message_html):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
     payload = {
-        "chat_id": CHAT_ID,
+        "chat_id": target_chat,
         "text": message_html,
         "parse_mode": "HTML",
         "disable_web_page_preview": "false"
@@ -121,14 +122,13 @@ def send_telegram(message_html):
         with urllib.request.urlopen(req, timeout=10) as response:
             return response.read()
     except Exception as e:
-        print(f"[ERRORE TELEGRAM]: {e}")
+        print(f"[ERRORE TELEGRAM -> {target_chat}]: {e}")
 
 def get_market_average(clean_title, global_id):
     """Calcola la media del valore di mercato interrogando gli annunci venduti e completati."""
     if clean_title in market_value_cache:
         return market_value_cache[clean_title]
 
-    # Estrae parole chiave significative per identificare il gioco
     words = [w for w in re.sub(r"[^a-zA-Z0-9 ]", " ", clean_title).split() if len(w) > 2][:4]
     search_q = " ".join(words)
     if not search_q:
@@ -248,8 +248,20 @@ def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
         safe_title = html.escape(title)
         safe_kw = html.escape(keyword)
 
-        if is_deal:
-            message = (
+        # 1. Messaggio per la chat privata (flusso di tutti gli annunci)
+        tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio</b>"
+        msg_normale = (
+            f"{tag} [{country_label}]\n\n"
+            f"🕹️ <b>Titolo:</b> {safe_title}\n"
+            f"💰 <b>Prezzo:</b> {current_price:.2f} {currency}\n"
+            f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
+            f"🔗 <a href='{item_url}'>Apri su eBay {country_label}</a>"
+        )
+        send_telegram(CHAT_ID_TUTTI, msg_normale)
+
+        # 2. Se è un affare, invia la scheda dettagliata sul canale @affariminchiotti
+        if is_deal and not is_first_run:
+            msg_affare = (
                 f"🚨 <b>AFFARE RILEVATO (+{margin_pct:.1f}% di margine)</b> [{country_label}]\n\n"
                 f"🕹️ <b>Titolo:</b> {safe_title}\n"
                 f"💰 <b>Prezzo Offerta:</b> {current_price:.2f} {currency}\n"
@@ -258,17 +270,8 @@ def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
                 f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
                 f"🔗 <a href='{item_url}'>ACQUISTA SUBITO SU EBAY</a>"
             )
-        else:
-            tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio</b>"
-            message = (
-                f"{tag} [{country_label}]\n\n"
-                f"🕹️ <b>Titolo:</b> {safe_title}\n"
-                f"💰 <b>Prezzo:</b> {current_price:.2f} {currency}\n"
-                f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
-                f"🔗 <a href='{item_url}'>Apri su eBay {country_label}</a>"
-            )
+            send_telegram(CANALE_AFFARI, msg_affare)
 
-        send_telegram(message)
         inviati += 1
         time.sleep(1.2)
 
@@ -293,17 +296,18 @@ def main():
     server_thread.start()
 
     time.sleep(2)
-    send_telegram(f"🚀 <b>Radar Arbitraggio & Cartucce Attivo!</b>\nFiltro margine minimo impostato a: <b>{MIN_PROFIT_MARGIN}%</b>")
+    send_telegram(CHAT_ID_TUTTI, "🚀 <b>Radar Sdoppiato Attivo!</b>\n- Chat privata: Tutti gli annunci\n- Canale <b>@affariminchiotti</b>: Solo affari con margine $\ge$ 19%")
+    send_telegram(CANALE_AFFARI, "🚀 <b>Canale Affari Retrogaming Connesso!</b>\nIn attesa di occasioni con sconto $\ge$ 19%...")
 
-    # Scansione catalogo iniziale
+    # Scansione iniziale archivio (inviata solo in privato per creare la base)
     for kw in KEYWORDS:
         for country_label, global_id in MARKETPLACES:
             search_ebay_finding(kw, country_label, global_id, is_first_run=True)
             time.sleep(0.4)
 
-    send_telegram("✅ <b>Monitoraggio live attivo!</b> Riceverai notifiche standard e alert dedicati con margine $\ge$ 19%.")
+    send_telegram(CHAT_ID_TUTTI, "✅ <b>Base pronta!</b> Ora in ascolto per i nuovi annunci dal vivo.")
 
-    # Scansione continua in tempo reale
+    # Sentinella in tempo reale
     while True:
         time.sleep(60)
         for kw in KEYWORDS:
