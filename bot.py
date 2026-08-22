@@ -1,4 +1,3 @@
-import base64
 import html
 import json
 import threading
@@ -12,10 +11,10 @@ from http.server import BaseHTTPRequestHandler, HTTPServer
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
 
-# Credenziali Ufficiali eBay Production
-EBAY_CLIENT_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
-EBAY_CLIENT_SECRET = "PRD-0149ee33b990-e288-4d81-83c2-df6e"
+# App ID Ufficiale eBay
+EBAY_APP_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
 
+# Marketplace ufficiali (Global ID eBay)
 MARKETPLACES = [
     ("IT", "EBAY-IT"),
     ("DE", "EBAY-DE"),
@@ -24,122 +23,137 @@ MARKETPLACES = [
 ]
 
 KEYWORDS = [
-    # Occasioni & Lotti
-    "svuoto soffitta giochi",
+    # ==================== LOTTI SVUOTA-CANTINA / SOFFITTA / SFUSI (MULTI-LINGUA) ====================
+    # Italiano
+    "svuoto soffitta giochi nintendo",
     "svuoto cantina nintendo",
-    "vecchi giochi nintendo",
-    "cassette nintendo",
-    "cassette super nintendo",
-    "giochi anni 90",
-    "blocco videogiochi vecchi",
-    "lotto videogiochi infanzia",
-    "scatola vecchi giochi",
+    "cassette nintendo vecchie",
+    "blocco cassette nintendo",
+    "lotto giochi snes",
+    "lotto cassette super nintendo",
+    "lotto giochi nintendo 64",
+    "lotto cassette n64",
+    "lotto giochi game boy",
+    "lotto cartucce mega drive",
+    "stock videogiochi vecchi",
+    "scatola vecchi giochi nintendo",
+    "fondo magazzino nintendo",
+    "lotto console da testare",
+    "giochi nintendo non testati",
 
-    # Distribuzione & Collezionismo
-    "pal gig",
-    "distribuzione gig",
-    "mattel nes",
-    "black label ps1",
-    "snes cib",
-    "n64 cib",
-    "game boy cib",
-    "snes ovp",
-    "n64 ovp",
-    "sigillato nintendo",
-    "sealed snes",
-    "sealed n64",
+    # Inglese (GB/Internazionale)
+    "nintendo cartridge bundle",
+    "snes cartridge joblot",
+    "n64 games bundle joblot",
+    "nes cartridge lot",
+    "game boy game lot untested",
+    "mega drive games bundle joblot",
+    "master system cartridge bundle",
+    "loft clearance nintendo",
+    "attic find video games",
+    "garage sale nintendo bundle",
+    "untested nintendo lot",
 
-    # Console 5ª Gen
-    "sega saturn console",
-    "sega saturn pal",
-    "playstation 1 scatola",
-    "ps1 console box",
-    "nintendo 64 console",
-    "nintendo 64 scatola",
-    "3do interactive",
-    "atari jaguar console",
-    "amiga cd32",
-    "pc-fx console",
-    "bandai pippin",
-    "casio loopy",
-    "bandai playdia",
+    # Tedesco (DE)
+    "nintendo spiele sammlung dachbodenfund",
+    "snes spiele konvolut",
+    "nintendo 64 spiele sammlung",
+    "nes spiele konvolut",
+    "game boy spiele sammlung",
+    "mega drive spiele konvolut",
+    "nintendo kellerfund",
+    "nintendo ungetestet sammlung",
 
-    # Console 16 Bit & Retro
-    "super nintendo console",
-    "snes console scatola",
-    "super famicom box",
-    "sega mega drive console",
-    "sega mega cd",
-    "sega 32x console",
-    "pc engine console",
-    "turbografx 16",
-    "neo geo aes console",
-    "neo geo cd",
-    "philips cd-i",
-    "commodore cdtv",
-    "nintendo nes console",
-    "atari 2600 console",
-    "vectrex console",
+    # Francese (FR)
+    "lot cartouches nintendo",
+    "lot jeux super nintendo snes",
+    "lot jeux n64 nintendo 64",
+    "lot jeux nes nintendo",
+    "lot jeux game boy",
+    "lot jeux mega drive sega",
+    "vide grenier nintendo",
+    "fond de grenier jeux video",
+    "jeux nintendo non teste",
 
-    # Portatili
-    "game boy classic scatola",
-    "game boy color box",
-    "game boy advance box",
-    "game boy micro",
-    "virtual boy console",
-    "sega game gear console",
-    "sega nomad",
-    "atari lynx console",
-    "game & watch nintendo",
+    # ==================== NINTENDO 8-BIT (NES / FAMICOM) ====================
+    "nes pal gig",
+    "mattel nes cartuccia",
+    "little samson nes",
+    "flintstones dinosaur nes",
+    "castlevania nes pal ita",
+    "duck tales 2 nes",
+    "snow bros nes",
+    "panic restaurant nes",
+    "bubble bobble 2 nes",
+    "mega man nes pal",
+    "famicom disk system lot",
 
-    # Giochi Rari
-    "panzer dragoon saga",
-    "shining force 3 saturn",
-    "deep fear saturn",
-    "snatcher sega",
-    "suikoden 2 pal ita",
-    "castlevania symphony of the night pal",
-    "tombi ps1 pal ita",
-    "tombi 2 ps1",
-    "klonoa ps1",
-    "kula world ps1",
-    "silent hill ps1 pal ita",
-    "conker bad fur day pal",
-    "paper mario n64 pal ita",
+    # ==================== SUPER NINTENDO (SNES) ====================
+    "snes pal gig",
     "mega man x3 snes",
+    "mega man 7 snes",
     "hagane snes",
     "demon crest snes",
     "terranigma pal ita",
     "whirlo snes",
     "castlevania vampire kiss snes",
-    "little samson nes",
-    "snow bros nes",
-    "pokemon smeraldo box",
-    "pokemon cristallo box",
+    "sunset riders snes",
+    "wild guns snes",
+    "super metroid pal ita",
+    "zelda snes pal ita",
+    "secret of evermore pal ita",
+    "illusion of time pal ita",
+    "lufia 2 pal ita",
+    "super famicom lot",
 
-    # Scatole e manuali
-    "snes solo scatola",
-    "scatola super nintendo",
-    "n64 box only",
-    "game boy box only",
-    "ps1 scatola vuota",
-    "manuale istruzioni snes",
-    "lotto retrogaming pal ita",
-    "fondo magazzino videogiochi"
+    # ==================== NINTENDO 64 (N64) ====================
+    "conker bad fur day pal",
+    "paper mario n64 pal ita",
+    "mario party 3 n64",
+    "castlevania legacy darkness n64",
+    "snowboard kids 2 n64",
+    "stunt racer 64",
+    "worms armageddon n64",
+    "resident evil 2 n64 pal ita",
+    "zelda majora mask n64 pal ita",
+    "zelda ocarina time n64 pal ita",
+
+    # ==================== GAME BOY (CLASSIC, COLOR, ADVANCE) ====================
+    "trip world game boy",
+    "pokemon smeraldo pal ita",
+    "pokemon cristallo pal ita",
+    "pokemon rosso fuoco pal ita",
+    "pokemon foglia verde pal ita",
+    "pokemon rubino zaffiro pal ita",
+    "ninja cop gba",
+    "boktai pal ita",
+    "castlevania aria sorrow gba",
+    "shantae gbc",
+    "metal gear solid gbc",
+
+    # ==================== SEGA A CARTUCCE (MASTER SYSTEM & MEGA DRIVE) ====================
+    "alien soldier mega drive",
+    "the punisher mega drive",
+    "mega man wily wars",
+    "castlevania new generation",
+    "knuckles chaotix 32x",
+    "darxide 32x",
+    "smurfs travel world master system",
+    "power strike 2 master system",
+    "golden axe 3 mega drive",
+    "sega nomad console"
 ]
 
+# Blacklist per eliminare repliche, protezioni e accessori inutili
 BLACKLIST = [
     "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
-    "custodia vuota ps4", "custodia vuota ps5", "cover art only", "manuale stampato",
-    "reprint", "manuale pdf", "box protector", "custodia protettiva", "salvascatola", 
-    "protettore box", "proteggi scatola", "protezione pet", "box plastica", 
-    "schutzhülle", "boite de protection", "solo guida", "guida strategica", "poster"
+    "reprint", "manuale stampato", "box protector", "custodia protettiva", 
+    "salvascatola", "protettore box", "proteggi scatola", "protezione pet", 
+    "box plastica", "schutzhülle", "boite de protection", "solo guida", 
+    "guida strategica", "poster", "playstation", "ps1", "ps2", "ps3", "ps4", "ps5"
 ]
 
 visti = set()
-current_token = None
-token_expires_at = 0
-last_auth_error = "Nessun errore"
 
 def send_telegram(message_html):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -157,79 +171,51 @@ def send_telegram(message_html):
     except Exception as e:
         print(f"[ERRORE TELEGRAM]: {e}")
 
-def get_ebay_oauth_token():
-    global current_token, token_expires_at, last_auth_error
-    if current_token and time.time() < token_expires_at:
-        return current_token
-
-    # Pulizia credenziali da eventuali spazi o caratteri invisibili
-    client_id = EBAY_CLIENT_ID.strip()
-    client_secret = EBAY_CLIENT_SECRET.strip()
-
-    # Formattazione corretta RFC per Basic Auth
-    auth_bytes = f"{client_id}:{client_secret}".encode("utf-8")
-    b64_auth = base64.b64encode(auth_bytes).decode("utf-8")
-
-    headers = {
-        "Content-Type": "application/x-www-form-urlencoded",
-        "Authorization": f"Basic {b64_auth}"
+def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
+    params = {
+        "OPERATION-NAME": "findItemsAdvanced",
+        "SERVICE-VERSION": "1.0.0",
+        "SECURITY-APPNAME": EBAY_APP_ID.strip(),
+        "RESPONSE-DATA-FORMAT": "JSON",
+        "REST-PAYLOAD": "",
+        "GLOBAL-ID": global_id,
+        "keywords": keyword,
+        "itemFilter(0).name": "ListingType",
+        "itemFilter(0).value": "FixedPrice",
+        "sortOrder": "StartTimeNewest",
+        "paginationInput.entriesPerPage": "3"
     }
     
-    # Body con scope esplicito corretto per le API Browse
-    params = {
-        "grant_type": "client_credentials",
-        "scope": "https://api.ebay.com/oauth/api_scope"
-    }
-    data = urllib.parse.urlencode(params).encode("utf-8")
-    req = urllib.request.Request("https://api.ebay.com/identity/v1/oauth2/token", data=data, headers=headers)
-
+    url = f"https://svcs.ebay.com/services/search/FindingService/v1?{urllib.parse.urlencode(params)}"
+    
     try:
-        with urllib.request.urlopen(req, timeout=10) as resp:
-            res_json = json.loads(resp.read().decode("utf-8"))
-            current_token = res_json.get("access_token")
-            token_expires_at = time.time() + res_json.get("expires_in", 7200) - 120
-            return current_token
-    except urllib.error.HTTPError as e:
-        err_msg = e.read().decode("utf-8", errors="ignore")
-        last_auth_error = f"HTTP {e.code}: {err_msg}"
-        return None
-    except Exception as e:
-        last_auth_error = str(e)
-        return None
-
-def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
-    token = get_ebay_oauth_token()
-    if not token:
-        return f"Auth Error ({last_auth_error})", 0
-
-    query = urllib.parse.quote_plus(keyword)
-    api_url = f"https://api.ebay.com/buy/browse/v1/item_summary/search?q={query}&filter=buyingOptions:{{FIXED_PRICE}}&sort=newlyListed&limit=3"
-
-    headers = {
-        "Authorization": f"Bearer {token}",
-        "X-EBAY-C-MARKETPLACE-ID": global_id,
-        "Accept": "application/json"
-    }
-
-    try:
-        req = urllib.request.Request(api_url, headers=headers)
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
         with urllib.request.urlopen(req, timeout=12) as resp:
             data = json.loads(resp.read().decode("utf-8"))
-            items = data.get("itemSummaries", [])
-    except urllib.error.HTTPError as e:
-        return f"HTTP {e.code}", 0
-    except Exception as e:
-        return f"Err: {str(e)[:15]}", 0
+            
+        root = data.get("findItemsAdvancedResponse", [{}])[0]
+        ack = root.get("ack", ["Failure"])[0]
+        
+        if ack != "Success":
+            return "API Error", 0
+
+        search_res = root.get("searchResult", [{}])[0]
+        items = search_res.get("item", [])
+    except Exception:
+        return "Err", 0
 
     inviati = 0
     max_items = 1 if is_first_run else 3
 
     for item in items[:max_items]:
-        item_id = item.get("itemId")
-        title = item.get("title", "")
-        item_url = item.get("itemWebUrl", "")
-        price_dict = item.get("price", {})
-        price_str = f"{price_dict.get('value', '')} {price_dict.get('currency', '')}"
+        item_id = item.get("itemId", [""])[0]
+        title = item.get("title", [""])[0]
+        item_url = item.get("viewItemURL", [""])[0]
+        
+        price_info = item.get("sellingStatus", [{}])[0].get("currentPrice", [{}])[0]
+        price_val = price_info.get("__value__", "")
+        currency = price_info.get("@currencyId", "")
+        price_str = f"{price_val} {currency}"
 
         if not item_id or not item_url:
             continue
@@ -242,13 +228,13 @@ def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
 
         visti.add(item_id)
 
-        tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio</b>"
+        tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio Cartucce</b>"
         safe_title = html.escape(title)
         safe_kw = html.escape(keyword)
 
         message = (
             f"{tag} [{country_label}]\n\n"
-            f"📦 <b>Titolo:</b> {safe_title}\n"
+            f"🕹️ <b>Titolo:</b> {safe_title}\n"
             f"💰 <b>Prezzo:</b> {price_str}\n"
             f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
             f"🔗 <a href='{item_url}'>Apri su eBay {country_label}</a>"
@@ -258,7 +244,7 @@ def search_ebay_api(keyword, country_label, global_id, is_first_run=False):
         inviati += 1
         time.sleep(1.2)
 
-    return "200 (API OK)", inviati
+    return "200 (OK)", inviati
 
 class PingHandler(BaseHTTPRequestHandler):
     def do_GET(self):
@@ -279,25 +265,22 @@ def main():
     server_thread.start()
 
     time.sleep(2)
-    send_telegram("🚀 <b>Test eBay API Ufficiale...</b>")
-
-    test_status, test_found = search_ebay_api("game boy", "IT", "EBAY-IT", is_first_run=True)
-    send_telegram(f"🔍 <b>Diagnostica API:</b>\n- Risposta: <code>{test_status}</code>\n- Annunci caricati: <code>{test_found}</code>")
+    send_telegram("🚀 <b>Radar Cartucce & Svuota-Soffitta Attivo!</b>")
 
     # Scansione iniziale archivio
     for kw in KEYWORDS:
         for country_label, global_id in MARKETPLACES:
-            search_ebay_api(kw, country_label, global_id, is_first_run=True)
+            search_ebay_finding(kw, country_label, global_id, is_first_run=True)
             time.sleep(0.4)
 
-    send_telegram("✅ <b>Base pronta!</b> Da ora in avanti riceverai solo i nuovi annunci pubblicati.")
+    send_telegram("✅ <b>Base cartucce pronta!</b> Ora in ascolto solo per nuovi annunci.")
 
     # Sentinella in tempo reale
     while True:
         time.sleep(60)
         for kw in KEYWORDS:
             for country_label, global_id in MARKETPLACES:
-                search_ebay_api(kw, country_label, global_id, is_first_run=False)
+                search_ebay_finding(kw, country_label, global_id, is_first_run=False)
                 time.sleep(0.6)
 
 if __name__ == "__main__":
