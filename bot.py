@@ -1,5 +1,6 @@
 import html
 import json
+import re
 import threading
 import time
 import urllib.error
@@ -7,14 +8,14 @@ import urllib.parse
 import urllib.request
 from http.server import BaseHTTPRequestHandler, HTTPServer
 
-# Configurazione Telegram
+# ==================== CONFIGURAZIONE ====================
 TELEGRAM_TOKEN = "8953657931:AAHiJknl8lm08CaU82NyZZN_HAeFw3iAaU4"
 CHAT_ID = "5463779"
-
-# App ID Ufficiale eBay
 EBAY_APP_ID = "Ferdinan-Myretrob-PRD-60149ee33-875cf987"
 
-# Marketplace ufficiali (Global ID eBay)
+# Percentuale minima di margine per considerare un'inserzione un affare (19% o superiore)
+MIN_PROFIT_MARGIN = 19.0
+
 MARKETPLACES = [
     ("IT", "EBAY-IT"),
     ("DE", "EBAY-DE"),
@@ -23,8 +24,7 @@ MARKETPLACES = [
 ]
 
 KEYWORDS = [
-    # ==================== LOTTI SVUOTA-CANTINA / SOFFITTA / SFUSI (MULTI-LINGUA) ====================
-    # Italiano
+    # Occasioni & Svuota-Soffitta
     "svuoto soffitta giochi nintendo",
     "svuoto cantina nintendo",
     "cassette nintendo vecchie",
@@ -40,8 +40,6 @@ KEYWORDS = [
     "fondo magazzino nintendo",
     "lotto console da testare",
     "giochi nintendo non testati",
-
-    # Inglese (GB/Internazionale)
     "nintendo cartridge bundle",
     "snes cartridge joblot",
     "n64 games bundle joblot",
@@ -51,33 +49,19 @@ KEYWORDS = [
     "master system cartridge bundle",
     "loft clearance nintendo",
     "attic find video games",
-    "garage sale nintendo bundle",
-    "untested nintendo lot",
-
-    # Tedesco (DE)
-    "nintendo spiele sammlung dachbodenfund",
     "snes spiele konvolut",
     "nintendo 64 spiele sammlung",
     "nes spiele konvolut",
     "game boy spiele sammlung",
-    "mega drive spiele konvolut",
-    "nintendo kellerfund",
-    "nintendo ungetestet sammlung",
-
-    # Francese (FR)
     "lot cartouches nintendo",
     "lot jeux super nintendo snes",
     "lot jeux n64 nintendo 64",
     "lot jeux nes nintendo",
-    "lot jeux game boy",
-    "lot jeux mega drive sega",
     "vide grenier nintendo",
-    "fond de grenier jeux video",
-    "jeux nintendo non teste",
 
-    # ==================== NINTENDO 8-BIT (NES / FAMICOM) ====================
-    "nes pal gig",
-    "mattel nes cartuccia",
+    # Giochi di Riferimento & Rari (Cartucce)
+    "adventure island nes",
+    "adventure island snes",
     "little samson nes",
     "flintstones dinosaur nes",
     "castlevania nes pal ita",
@@ -86,10 +70,6 @@ KEYWORDS = [
     "panic restaurant nes",
     "bubble bobble 2 nes",
     "mega man nes pal",
-    "famicom disk system lot",
-
-    # ==================== SUPER NINTENDO (SNES) ====================
-    "snes pal gig",
     "mega man x3 snes",
     "mega man 7 snes",
     "hagane snes",
@@ -101,50 +81,21 @@ KEYWORDS = [
     "wild guns snes",
     "super metroid pal ita",
     "zelda snes pal ita",
-    "secret of evermore pal ita",
-    "illusion of time pal ita",
-    "lufia 2 pal ita",
-    "super famicom lot",
-
-    # ==================== NINTENDO 64 (N64) ====================
     "conker bad fur day pal",
     "paper mario n64 pal ita",
     "mario party 3 n64",
     "castlevania legacy darkness n64",
     "snowboard kids 2 n64",
-    "stunt racer 64",
-    "worms armageddon n64",
-    "resident evil 2 n64 pal ita",
-    "zelda majora mask n64 pal ita",
-    "zelda ocarina time n64 pal ita",
-
-    # ==================== GAME BOY (CLASSIC, COLOR, ADVANCE) ====================
     "trip world game boy",
     "pokemon smeraldo pal ita",
     "pokemon cristallo pal ita",
     "pokemon rosso fuoco pal ita",
     "pokemon foglia verde pal ita",
-    "pokemon rubino zaffiro pal ita",
-    "ninja cop gba",
-    "boktai pal ita",
-    "castlevania aria sorrow gba",
-    "shantae gbc",
-    "metal gear solid gbc",
-
-    # ==================== SEGA A CARTUCCE (MASTER SYSTEM & MEGA DRIVE) ====================
     "alien soldier mega drive",
     "the punisher mega drive",
-    "mega man wily wars",
-    "castlevania new generation",
-    "knuckles chaotix 32x",
-    "darxide 32x",
-    "smurfs travel world master system",
-    "power strike 2 master system",
-    "golden axe 3 mega drive",
-    "sega nomad console"
+    "mega man wily wars"
 ]
 
-# Blacklist per eliminare repliche, protezioni e accessori inutili
 BLACKLIST = [
     "repro", "riproduzione", "custom", "copia", "falso", "replica", "fake", 
     "reprint", "manuale stampato", "box protector", "custodia protettiva", 
@@ -154,6 +105,7 @@ BLACKLIST = [
 ]
 
 visti = set()
+market_value_cache = {}
 
 def send_telegram(message_html):
     url = f"https://api.telegram.org/bot{TELEGRAM_TOKEN}/sendMessage"
@@ -170,6 +122,58 @@ def send_telegram(message_html):
             return response.read()
     except Exception as e:
         print(f"[ERRORE TELEGRAM]: {e}")
+
+def get_market_average(clean_title, global_id):
+    """Calcola la media del valore di mercato interrogando gli annunci venduti e completati."""
+    if clean_title in market_value_cache:
+        return market_value_cache[clean_title]
+
+    # Estrae parole chiave significative per identificare il gioco
+    words = [w for w in re.sub(r"[^a-zA-Z0-9 ]", " ", clean_title).split() if len(w) > 2][:4]
+    search_q = " ".join(words)
+    if not search_q:
+        return None
+
+    params = {
+        "OPERATION-NAME": "findCompletedItems",
+        "SERVICE-VERSION": "1.0.0",
+        "SECURITY-APPNAME": EBAY_APP_ID.strip(),
+        "RESPONSE-DATA-FORMAT": "JSON",
+        "REST-PAYLOAD": "",
+        "GLOBAL-ID": global_id,
+        "keywords": search_q,
+        "itemFilter(0).name": "SoldItemsOnly",
+        "itemFilter(0).value": "true",
+        "sortOrder": "EndTimeSoonest",
+        "paginationInput.entriesPerPage": "8"
+    }
+
+    url = f"https://svcs.ebay.com/services/search/FindingService/v1?{urllib.parse.urlencode(params)}"
+    try:
+        req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+        with urllib.request.urlopen(req, timeout=10) as resp:
+            data = json.loads(resp.read().decode("utf-8"))
+
+        root = data.get("findCompletedItemsResponse", [{}])[0]
+        items = root.get("searchResult", [{}])[0].get("item", [])
+        
+        prices = []
+        for it in items:
+            try:
+                val = float(it.get("sellingStatus", [{}])[0].get("currentPrice", [{}])[0].get("__value__", 0))
+                if val > 0:
+                    prices.append(val)
+            except Exception:
+                continue
+
+        if len(prices) >= 2:
+            avg_price = sum(prices) / len(prices)
+            market_value_cache[clean_title] = avg_price
+            return avg_price
+    except Exception:
+        pass
+
+    return None
 
 def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
     params = {
@@ -194,13 +198,10 @@ def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
             data = json.loads(resp.read().decode("utf-8"))
             
         root = data.get("findItemsAdvancedResponse", [{}])[0]
-        ack = root.get("ack", ["Failure"])[0]
-        
-        if ack != "Success":
+        if root.get("ack", ["Failure"])[0] != "Success":
             return "API Error", 0
 
-        search_res = root.get("searchResult", [{}])[0]
-        items = search_res.get("item", [])
+        items = root.get("searchResult", [{}])[0].get("item", [])
     except Exception:
         return "Err", 0
 
@@ -213,9 +214,13 @@ def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
         item_url = item.get("viewItemURL", [""])[0]
         
         price_info = item.get("sellingStatus", [{}])[0].get("currentPrice", [{}])[0]
-        price_val = price_info.get("__value__", "")
-        currency = price_info.get("@currencyId", "")
-        price_str = f"{price_val} {currency}"
+        price_val_str = price_info.get("__value__", "0")
+        currency = price_info.get("@currencyId", "EUR")
+        
+        try:
+            current_price = float(price_val_str)
+        except ValueError:
+            current_price = 0.0
 
         if not item_id or not item_url:
             continue
@@ -228,17 +233,40 @@ def search_ebay_finding(keyword, country_label, global_id, is_first_run=False):
 
         visti.add(item_id)
 
-        tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio Cartucce</b>"
+        # Analisi margine di profitto rispetto al mercato
+        market_val = get_market_average(title_clean, global_id)
+        is_deal = False
+        margin_pct = 0.0
+        profit_est = 0.0
+
+        if market_val and market_val > current_price and current_price > 0:
+            margin_pct = ((market_val - current_price) / market_val) * 100
+            profit_est = market_val - current_price
+            if margin_pct >= MIN_PROFIT_MARGIN:
+                is_deal = True
+
         safe_title = html.escape(title)
         safe_kw = html.escape(keyword)
 
-        message = (
-            f"{tag} [{country_label}]\n\n"
-            f"🕹️ <b>Titolo:</b> {safe_title}\n"
-            f"💰 <b>Prezzo:</b> {price_str}\n"
-            f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
-            f"🔗 <a href='{item_url}'>Apri su eBay {country_label}</a>"
-        )
+        if is_deal:
+            message = (
+                f"🚨 <b>AFFARE RILEVATO (+{margin_pct:.1f}% di margine)</b> [{country_label}]\n\n"
+                f"🕹️ <b>Titolo:</b> {safe_title}\n"
+                f"💰 <b>Prezzo Offerta:</b> {current_price:.2f} {currency}\n"
+                f"📊 <b>Valore Medio Mercato:</b> ~{market_val:.2f} {currency}\n"
+                f"📈 <b>Margine Stimato:</b> +{profit_est:.2f} {currency} (-{margin_pct:.0f}%)\n"
+                f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
+                f"🔗 <a href='{item_url}'>ACQUISTA SUBITO SU EBAY</a>"
+            )
+        else:
+            tag = "📦 <b>Catalogo Esistente</b>" if is_first_run else "🎯 <b>Nuovo Annuncio</b>"
+            message = (
+                f"{tag} [{country_label}]\n\n"
+                f"🕹️ <b>Titolo:</b> {safe_title}\n"
+                f"💰 <b>Prezzo:</b> {current_price:.2f} {currency}\n"
+                f"🔍 <b>Filtro:</b> {safe_kw}\n\n"
+                f"🔗 <a href='{item_url}'>Apri su eBay {country_label}</a>"
+            )
 
         send_telegram(message)
         inviati += 1
@@ -265,17 +293,17 @@ def main():
     server_thread.start()
 
     time.sleep(2)
-    send_telegram("🚀 <b>Radar Cartucce & Svuota-Soffitta Attivo!</b>")
+    send_telegram(f"🚀 <b>Radar Arbitraggio & Cartucce Attivo!</b>\nFiltro margine minimo impostato a: <b>{MIN_PROFIT_MARGIN}%</b>")
 
-    # Scansione iniziale archivio
+    # Scansione catalogo iniziale
     for kw in KEYWORDS:
         for country_label, global_id in MARKETPLACES:
             search_ebay_finding(kw, country_label, global_id, is_first_run=True)
             time.sleep(0.4)
 
-    send_telegram("✅ <b>Base cartucce pronta!</b> Ora in ascolto solo per nuovi annunci.")
+    send_telegram("✅ <b>Monitoraggio live attivo!</b> Riceverai notifiche standard e alert dedicati con margine $\ge$ 19%.")
 
-    # Sentinella in tempo reale
+    # Scansione continua in tempo reale
     while True:
         time.sleep(60)
         for kw in KEYWORDS:
